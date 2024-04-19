@@ -1,0 +1,78 @@
+the 6502's reset is a vectored jump. the vectors responsible for jumping are located at 0xFFFC and 0xFFFD.
+this means that when reset is pulled low, the low byte of the pc register will be loaded with the address stored by 0xFFFC and the high byte will be loaded with the address stored by 0xFFFD.
+
+the stack pointer register contains the low byte of memory address range 0x0100-0x01FF
+the high byte is always hardcoded to be 0x01, the low byte can vary from 0x00 to 0xFF
+
+the x and y registers are internal and are used for indexed addressing.
+the cpu first fetches the address from memory, then the contents of either x or y are added to the address.
+the address fetched from memory is dependent on the cpu instruction being executed.
+load, store, increment, decrement, and exchange data instructions can all operate on the x and y registers
+
+the program counter is a 16 bit register split into two 8 bit registers: pcl and pch.
+the program counter outputs its contents onto the address pins upon the rising edge of a clock cycle. However, you must wait 300ns after the rising edge before reading the address pins, as the pins need to electrically stabilize. 
+the address is valid until the next rising edge.
+
+the incrementation amount done by the pc is dependent on the instruction. 
+a 1 byte instruction will increment the pc by 1, a 2 byte instruction will increment it by 2, etc.
+branching instructions will always use relative addressing. this means that the instruction to branch to is specified by the number of bytes it is from the current instruction.
+
+for example: b 0x06 means that were going to branch 6 bytes forward from the current instruction.
+if the current instruction is 0x0207, we will add 1 to it to get 0x0208 because 0x06 is at location 0x0208. Then, we will increment 6 steps ahead to 0x020E. this is the final address we will branch to.
+
+we can also branch backwards. simply substitute 0x06 for 0xFA, 0x06's twos complement representation, then subtract 0x06 from 0x0207's address to get 0x0203, the address to branch to. we dont need to initially subtract 1 since were already at the beginning of the instruction.
+
+total memory addressable by the 6502 is 64 kilobytes. 
+the upper byte specifies the page number, the lower byte specifies the individual byte inside the page.
+
+page zero of the memory space is restricted to zero page addressing and indirect addressing.
+in zero page addressing: the upper byte is always assumed to be zero, while the lower byte is assumed to be a byte location in page 0. the zero page can store whatever we want in this way, as long as the data is 8 bits long.
+in indirect addressing: the second byte in the indirect addressing instruction points to the byte location in page zero. the byte location stores the lower byte of the intended address, with the upper byte being stored in the next address. we are restricted to indirectly storing 128 addresses with this scheme.
+
+page 1 is preallocated by the cpu to be used as the stack and cannot be designated as anything else
+
+memory addresses 0xFFFA - 0xFFFF are preallocated by the cpu and cannot be changed.
+0xFFFA - 0xFFFB store the branching address for NMI
+0xFFFC - 0xFFFD store the branching address for reset
+0xFFFE - 0xFFFF store the branching address for IRQ
+
+the R/NOT(W) pin changes on the rising edge of a clock cycle. 
+When the CPU is writing to a memory address, the pin drops to low voltage and the memory address is output on the address bus.
+interestingly, the cpu doesnt actually start to write the actual data until the last 100 nano seconds of the cycle. if the cpu is running at 1mhz, the device being addressed has about 575 nano seconds to get itself ready before the cpu sends it data.
+
+NOT(RDY) (M2 on the nes cpu) pin is an input from external devices that cpu reads data from. it tells the cpu to wait while the external devices sends data over to it.
+to activate it, the line must go low during the rising edge of a clock cycle. this line only takes affect if the cpu is reading and not writing. I.E: if R/W is high and not low.
+
+IRQ requests are maskable. meaning the CPU will only respond to them if the I flag in the cpu status register is set to 1.
+
+NMI requests are non-maskable. meaning the CPU will always respond to them regardless of the I flag.
+
+SYNC was available on the 6502 but is not on the NES cpu.
+
+NOT(SO) was available on 6502 but is not on the NES cpu.
+
+since the CPU is memory mapped, writing to an output port is the same as performing a memory write operation.
+
+Accumulator addressing is unique to shift and rotate instructions. it shifts/rotates either the data in the accumulator or the specified memory location.
+
+relative addressing is unique to branching instructions and was explained in depth earlier.
+
+immediate addressing is when you directly specify the data you want to load either into the accumulator or into an index register. it can only be used with 2 byte instructions and requires you use the "#" operator for the data portion of the instruction.
+example: LDA #80h means we should load the accumulator with data 0x80
+ADC #07h means we should add 0x07 to whatever is in the accumulator and flags the carry bit if needed.
+
+absolute addressing is for when you need to access memory mapped io. its only usable with 3 byte instructions.
+the address specified in the instruction is stored in little endian. meaning that the lower order is stored in byte 2 and the higher order is stored in byte 3.
+
+there is decoding hardware inside the cpu that can differentiate between an absolute address and an immediate address. what this implies is that, if you want to perform ADC with immediate value 0x69, all you need to do is to input:
+ADC #69h
+but if you want to perform ADC with address 0x60, all you need to do is to input:
+ADC #0069h
+
+the cpu will automatically interpret the extra byte as being a memory address. but, you must use 2 bytes instead of 1 if you want the operand to be a memory address instead of raw data.
+
+implied addressing is when the address is implied by the instruction. DEX means "decrement x" so no address is needed.
+
+absolute indexed is when you take a 16 bit memory address, and add it to either the x or y register. usefuly for arrays.
+a subset of this is zero paged index, where the upper byte is just assumed to be in the zero page.
+

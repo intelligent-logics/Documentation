@@ -1,0 +1,21 @@
+the RICOH cpu has no seperate lines dedicated for reading controller input. instead, they are memory mapped.
+
+Here is the process for retrieving controller inputs on the NES
+
+1.the programmer writes the instructions:
+"LDA #1"
+"STA $4016"
+there is internal decoding hardware inside the ricoh that, when it detects the address is $4016 and the databus corresponds to 00000001, it automatically pulls 4016w0 high.
+inside the NES controller is a shift register that has the option of loading itself in parallel asynchronously when one of its pins is pulled high. This "jamming" pin is connected to 4016w0
+
+2.the programmer writes the instructions
+"LDA #0"
+"STA $4016"
+there is internal decoding hardware inside the ricoh that, when it detects the address is $4016 and the databus corresponds to 00000001, it automatically pulls 4016w0 low.
+the shift register inside the controller detects that the jamming pin is pulled low, and goes back into serial mode.
+
+3.the programmer writes the instruction
+"LDA $4016"
+8 times.
+Whenever this instruction is detected, internal decoding hardware inside the ricoh pulls
+RW high from a low state (since a read instruction pulls it from low to high after a write instruction), this line is connected directly to the clock pin of the controller shift register. Meaning that reading shifts in one bit from the controller.

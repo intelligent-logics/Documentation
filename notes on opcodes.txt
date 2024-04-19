@@ -1,0 +1,51 @@
+type (group) 1 instructions:
+ADC
+AND
+CMP
+EOR
+LDA
+ORA
+SBC
+STA
+
+all of these instructions can use the following addressing schemes:
+immediate (ADC, #0x69)
+zero page (ADC, 0x69)
+zero page, X (ADC, 0x69, X)
+absolute (ADC, 0x0069)
+absolute indexed, X (ADC, 0x0069, X)
+absolute indexed, Y (ADC, 0x0069, Y)
+indirect indexed (???)
+
+type 2 instructions:
+LSR
+ASL
+ROL
+ROR
+INC
+DEC
+LDX
+STX
+all of these instructions can use the following addressing schemes:
+zero page (LSR, 0x69)
+zero page, X (LSR, 0x69, X)
+absolute (LSR, 0x0069)
+absolute indexed, X (LSR, 0x0069, X)
+accumulator (LSR)
+
+type 3 instructions:
+BCC
+BCS
+BEQ
+BIT
+BMI
+BNE
+BPL
+BRK
+BVC
+BVS
+CLC
+CLD
+CLI
+CLV
+
